@@ -23,6 +23,15 @@ export interface FirebaseLoginResponse {
   expiresIn?: string
 }
 
+export interface FirebaseRefreshResponse {
+  id_token: string
+  refresh_token: string
+  expires_in: string
+  token_type?: string
+  user_id?: string
+  project_id?: string
+}
+
 export interface FirebaseErrorResponse {
   error?: {
     code?: number

@@ -7,6 +7,20 @@ import type {
 
 const FIREBASE_LOGIN_URL =
   'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword'
+const FIREBASE_REFRESH_URL = 'https://securetoken.googleapis.com/v1/token'
+
+export interface FirebaseRefreshResponse {
+  /** New Firebase ID token. */
+  id_token: string
+  /** Rotated refresh token. */
+  refresh_token: string
+  /** Lifetime of the new id_token in seconds (string from Firebase). */
+  expires_in: string
+  /** Always "Bearer". */
+  token_type?: string
+  user_id?: string
+  project_id?: string
+}
 
 export class ApiError extends Error {
   status: number
@@ -64,6 +78,50 @@ export async function loginWithFirebase(params: {
     throw new ApiError(humanizeFirebaseError(err?.message), res.status, data)
   }
   return data as FirebaseLoginResponse
+}
+
+/**
+ * Exchange a refresh token for a fresh ID token via the Firebase Secure
+ * Token endpoint. Used by the auth store to keep the session alive without
+ * forcing the user to re-enter their password.
+ *
+ * @see https://firebase.google.com/docs/reference/rest/auth#section-refresh-token
+ */
+export async function refreshFirebaseToken(
+  refreshToken: string,
+): Promise<FirebaseRefreshResponse> {
+  const envErr = assertEnvForLogin()
+  if (envErr) throw new ApiError(envErr, 0, null)
+  if (!refreshToken) {
+    throw new ApiError('Không có refresh token để làm mới phiên.', 0, null)
+  }
+
+  const url = `${FIREBASE_REFRESH_URL}?key=${encodeURIComponent(env.firebaseKey)}`
+  const body = new URLSearchParams({
+    grant_type: 'refresh_token',
+    refresh_token: refreshToken,
+  })
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  })
+
+  const data = (await res.json().catch(() => null)) as
+    | FirebaseRefreshResponse
+    | FirebaseErrorResponse
+    | null
+
+  if (!res.ok || !data || 'error' in data) {
+    const err = (data as FirebaseErrorResponse | null)?.error
+    throw new ApiError(
+      humanizeFirebaseError(err?.message) || 'Làm mới phiên thất bại.',
+      res.status,
+      data,
+    )
+  }
+  return data as FirebaseRefreshResponse
 }
 
 export async function fetchLeadStats(

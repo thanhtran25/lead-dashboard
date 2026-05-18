@@ -9,7 +9,7 @@ export default function LoginPage() {
   const t = useT()
   const user = useAuth((s) => s.user)
   const isExpired = useAuth((s) => s.isExpired)
-  const logout = useAuth((s) => s.logout)
+  const refreshing = useAuth((s) => s.refreshing)
   const status = useAuth((s) => s.status)
   const errorMsg = useAuth((s) => s.error)
   const login = useAuth((s) => s.login)
@@ -24,13 +24,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
 
-  // If a stored session has expired we must clear it; otherwise the
-  // <Navigate> below would bounce us to /dashboard, ProtectedRoute would
-  // bounce us back to /login, and we'd loop until the router throttles.
-  useEffect(() => {
-    if (user && isExpired()) logout()
-  }, [user, isExpired, logout])
-
   // Warm up the dashboard chunk while the user is still typing so navigation
   // after sign-in feels instant. Vite resolves the dynamic import once and
   // caches it; subsequent imports are free.
@@ -43,7 +36,10 @@ export default function LoginPage() {
     return () => window.clearTimeout(id)
   }, [])
 
-  if (user && !isExpired()) {
+  // Only redirect away from /login when we have a working session — i.e.
+  // either the token is still valid OR a refresh is in flight (which the
+  // ProtectedRoute will hold open until it resolves).
+  if (user && (!isExpired() || refreshing)) {
     return <Navigate to={from ?? '/dashboard'} replace />
   }
 
