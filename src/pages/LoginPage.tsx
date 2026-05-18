@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
 import { env } from '@/lib/env'
@@ -21,6 +21,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
+
+  // Warm up the dashboard chunk while the user is still typing so navigation
+  // after sign-in feels instant. Vite resolves the dynamic import once and
+  // caches it; subsequent imports are free.
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      import('@/pages/DashboardPage').catch(() => {
+        /* ignore — will retry on actual navigation */
+      })
+    }, 300)
+    return () => window.clearTimeout(id)
+  }, [])
 
   if (user) return <Navigate to={from ?? '/dashboard'} replace />
 

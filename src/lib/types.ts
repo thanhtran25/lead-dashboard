@@ -1,6 +1,6 @@
 export type ChannelType = 'IKIS' | 'WTS' | 'DX' | string
 
-export type GroupBy = 'DAY' | 'WEEK' | 'MONTH'
+export type GroupBy = 'DAY' | 'MONTH' | 'YEAR'
 
 /** Which numeric field of each sub-channel to use for charts/KPIs. */
 export type MetricKey = 'total' | 'completed' | 'processing' | 'failed'

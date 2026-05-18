@@ -13,11 +13,9 @@ body,
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #0a0a0c;
-  background-image:
-    radial-gradient(900px 500px at 90% -10%, rgba(124, 92, 255, 0.08), transparent 60%),
-    radial-gradient(700px 400px at -10% 110%, rgba(96, 165, 250, 0.05), transparent 60%);
+  font-family: 'Inter', 'Roboto', system-ui, -apple-system, sans-serif;
+  background-color: #0a0815;
+  color: #ffffff;
 }
 
 ::selection {
@@ -26,24 +24,23 @@ body {
 }
 
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 *::-webkit-scrollbar-track {
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.10);
   border-radius: 8px;
-  border: 2px solid #0a0a0c;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 @layer components {
   .eyebrow {
-    @apply text-[11px] font-medium uppercase tracking-ultra text-fg-dim;
+    @apply text-[11px] font-medium uppercase tracking-wider text-fg-dim;
   }
 
   .num {
@@ -55,8 +52,16 @@ body {
     @apply bg-surface-1 border border-line rounded-lg shadow-card;
   }
 
-  .card-header {
-    @apply flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-line;
+  .card-pad {
+    @apply p-5;
+  }
+
+  .card-title {
+    @apply text-base font-semibold text-fg leading-tight;
+  }
+
+  .card-subtitle {
+    @apply text-xs text-fg-muted mt-1;
   }
 
   .btn-primary {
@@ -97,6 +102,21 @@ body {
   .select {
     @apply h-9 bg-surface-1 border border-line rounded-md px-3
       text-xs text-fg-muted outline-none transition-colors
-      focus:border-brand hover:text-fg;
+      focus:border-brand hover:text-fg cursor-pointer;
+  }
+
+  .badge-up {
+    @apply text-[11px] font-semibold px-2 py-0.5 rounded
+      bg-signal-greenSoft text-signal-green;
+  }
+
+  .badge-down {
+    @apply text-[11px] font-semibold px-2 py-0.5 rounded
+      bg-signal-redSoft text-signal-red;
+  }
+
+  .badge-flat {
+    @apply text-[11px] font-semibold px-2 py-0.5 rounded
+      bg-surface-3 text-fg-muted;
   }
 }

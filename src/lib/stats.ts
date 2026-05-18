@@ -172,8 +172,8 @@ function pickPeriod(row: Record<string, unknown>): string | null {
     'bucket',
     'time',
     'timestamp',
-    'week',
     'month',
+    'year',
   ]) {
     const v = row[key]
     if (typeof v === 'string' && v.length > 0) return v.slice(0, 10)

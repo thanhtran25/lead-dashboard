@@ -5,7 +5,6 @@ import {
   BarChart,
   Bar,
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -14,8 +13,8 @@ import {
   YAxis,
   type TooltipContentProps,
 } from 'recharts'
-import type { LeadBucket, MetricKey } from '@/lib/types'
-import { metricOf } from '@/lib/types'
+import type { LeadBucket, MetricKey, GroupBy } from '@/lib/types'
+import { metricOf, emptyStats } from '@/lib/types'
 import { formatNumber } from '@/lib/format'
 import { useT, type TKey } from '@/lib/i18n'
 
@@ -26,35 +25,40 @@ const CHANNEL_COLORS: Record<string, string> = {
   WTS: '#fb923c',
   DX: '#60a5fa',
 }
-
-const FALLBACK_COLORS = ['#a78bfa', '#f472b6', '#facc15', '#22d3ee', '#fb7185']
+const FALLBACK_COLORS = ['#a78bfa', '#f472b6', '#facc15', '#22d3ee']
 
 function colorFor(channel: string, idx: number): string {
   return CHANNEL_COLORS[channel] ?? FALLBACK_COLORS[idx % FALLBACK_COLORS.length]
 }
 
+const MODE_LABELS: Record<Mode, TKey> = {
+  line: 'chart.mode.line',
+  bar: 'chart.mode.bar',
+  stacked: 'chart.mode.stacked',
+}
+
+const GROUP_LABELS: Record<GroupBy, TKey> = {
+  DAY: 'filter.group.day',
+  MONTH: 'filter.group.month',
+  YEAR: 'filter.group.year',
+}
+
 interface ChartRow {
   label: string
   period: string
-  total: number
   [channel: string]: string | number
 }
 
-const METRIC_LABEL_KEYS: Record<MetricKey, TKey> = {
-  total: 'metric.total',
-  completed: 'metric.completed',
-  processing: 'metric.processing',
-  failed: 'metric.failed',
-}
-
-export default function LeadsChart({
+export default function VolumeCard({
   buckets,
   channels,
   metric,
+  groupBy,
 }: {
   buckets: LeadBucket[]
   channels: string[]
   metric: MetricKey
+  groupBy: GroupBy
 }) {
   const t = useT()
   const [mode, setMode] = useState<Mode>('line')
@@ -62,13 +66,9 @@ export default function LeadsChart({
   const data = useMemo<ChartRow[]>(
     () =>
       buckets.map((b) => {
-        const row: ChartRow = {
-          label: b.label,
-          period: b.period,
-          total: metricOf(b.status, metric),
-        }
+        const row: ChartRow = { label: b.label, period: b.period }
         for (const c of channels) {
-          row[c] = metricOf(b.channels[c] ?? { completed: 0, failed: 0, processing: 0, total: 0 }, metric)
+          row[c] = metricOf(b.channels[c] ?? emptyStats(), metric)
         }
         return row
       }),
@@ -80,36 +80,36 @@ export default function LeadsChart({
     channels.length > 0 &&
     data.some((d) => channels.some((c) => Number(d[c]) > 0))
 
-  const modes: Array<{ id: Mode; key: TKey }> = [
-    { id: 'line', key: 'chart.mode.line' },
-    { id: 'bar', key: 'chart.mode.bar' },
-    { id: 'stacked', key: 'chart.mode.stacked' },
-  ]
+  // Compact summary numbers shown above the chart (xx.html-style metric blocks)
+  const totals = useMemo(() => {
+    const sums: Record<string, number> = {}
+    for (const c of channels) sums[c] = 0
+    for (const b of buckets) {
+      for (const c of channels) {
+        sums[c] += metricOf(b.channels[c] ?? emptyStats(), metric)
+      }
+    }
+    return sums
+  }, [buckets, channels, metric])
 
   return (
     <section className="card">
-      <div className="card-header">
+      <div className="card-pad pb-3 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h3 className="text-base font-semibold text-fg flex items-center gap-2">
-            {t('chart.title')}
-            <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-brand/15 text-brand">
-              {t(METRIC_LABEL_KEYS[metric])}
-            </span>
-          </h3>
-          <p className="text-xs text-fg-muted mt-1">
-            {t('chart.summary', {
-              channels: channels.length,
-              buckets: buckets.length,
+          <h3 className="card-title">{t('volume.title')}</h3>
+          <p className="card-subtitle">
+            {t('volume.subtitle', {
+              group: t(GROUP_LABELS[groupBy]).toLowerCase(),
             })}
           </p>
         </div>
         <div className="inline-flex bg-surface-2 rounded-md p-0.5">
-          {modes.map((m) => {
-            const active = mode === m.id
+          {(Object.keys(MODE_LABELS) as Mode[]).map((m) => {
+            const active = mode === m
             return (
               <button
-                key={m.id}
-                onClick={() => setMode(m.id)}
+                key={m}
+                onClick={() => setMode(m)}
                 className={
                   'h-7 px-3 text-xs font-medium rounded transition-colors ' +
                   (active
@@ -118,15 +118,26 @@ export default function LeadsChart({
                 }
                 aria-pressed={active}
               >
-                {t(m.key)}
+                {t(MODE_LABELS[m])}
               </button>
             )
           })}
         </div>
       </div>
 
-      <div className="p-4">
-        <div className="h-[380px] w-full">
+      <div className="px-5 pb-2 flex items-center gap-8 flex-wrap">
+        {channels.map((c, i) => (
+          <MetricBlock
+            key={c}
+            color={colorFor(c, i)}
+            label={c}
+            value={formatNumber(totals[c] ?? 0)}
+          />
+        ))}
+      </div>
+
+      <div className="px-3 pb-5">
+        <div className="h-[260px] w-full">
           {hasData ? (
             <ResponsiveContainer width="100%" height="100%">
               {renderChart(mode, data, channels)}
@@ -140,10 +151,33 @@ export default function LeadsChart({
   )
 }
 
+function MetricBlock({
+  color,
+  label,
+  value,
+}: {
+  color: string
+  label: string
+  value: string
+}) {
+  return (
+    <div>
+      <p className="num text-xl font-bold text-fg leading-tight">{value}</p>
+      <p className="text-xs text-fg-muted mt-1 flex items-center gap-1.5">
+        <span
+          className="block h-2 w-2 rounded-full"
+          style={{ background: color }}
+        />
+        {label}
+      </p>
+    </div>
+  )
+}
+
 function renderChart(mode: Mode, data: ChartRow[], channels: string[]) {
   const common = {
     data,
-    margin: { top: 16, right: 24, left: 0, bottom: 8 },
+    margin: { top: 8, right: 16, left: 0, bottom: 8 },
   }
 
   if (mode === 'bar') {
@@ -151,7 +185,12 @@ function renderChart(mode: Mode, data: ChartRow[], channels: string[]) {
       <BarChart {...common}>
         <ChartScaffold />
         {channels.map((c, i) => (
-          <Bar key={c} dataKey={c} fill={colorFor(c, i)} radius={[3, 3, 0, 0]} />
+          <Bar
+            key={c}
+            dataKey={c}
+            fill={colorFor(c, i)}
+            radius={[3, 3, 0, 0]}
+          />
         ))}
       </BarChart>
     )
@@ -164,13 +203,13 @@ function renderChart(mode: Mode, data: ChartRow[], channels: string[]) {
           {channels.map((c, i) => (
             <linearGradient
               key={c}
-              id={`grad-${c}`}
+              id={`vol-${c}`}
               x1="0"
               y1="0"
               x2="0"
               y2="1"
             >
-              <stop offset="0%" stopColor={colorFor(c, i)} stopOpacity={0.6} />
+              <stop offset="0%" stopColor={colorFor(c, i)} stopOpacity={0.55} />
               <stop offset="100%" stopColor={colorFor(c, i)} stopOpacity={0.05} />
             </linearGradient>
           ))}
@@ -184,7 +223,7 @@ function renderChart(mode: Mode, data: ChartRow[], channels: string[]) {
             stackId="1"
             stroke={colorFor(c, i)}
             strokeWidth={1.6}
-            fill={`url(#grad-${c})`}
+            fill={`url(#vol-${c})`}
           />
         ))}
       </AreaChart>
@@ -216,32 +255,22 @@ function ChartScaffold() {
       <XAxis
         dataKey="label"
         stroke="rgba(255,255,255,0.4)"
-        tick={{ fontSize: 11, fill: '#9a9aa1' }}
+        tick={{ fontSize: 11, fill: '#9a93b0' }}
         tickMargin={8}
         axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
         tickLine={false}
       />
       <YAxis
         stroke="rgba(255,255,255,0.4)"
-        tick={{ fontSize: 11, fill: '#9a9aa1' }}
+        tick={{ fontSize: 11, fill: '#9a93b0' }}
         tickFormatter={(v) => formatNumber(Number(v), { compact: true })}
         axisLine={false}
         tickLine={false}
-        width={48}
+        width={42}
       />
       <Tooltip
         content={(props) => <ChartTooltip {...props} />}
         cursor={{ stroke: 'rgba(255,255,255,0.12)' }}
-      />
-      <Legend
-        verticalAlign="top"
-        align="right"
-        wrapperStyle={{ paddingBottom: 12 }}
-        iconType="circle"
-        iconSize={8}
-        formatter={(value) => (
-          <span className="text-xs text-fg-muted ml-1">{String(value)}</span>
-        )}
       />
     </>
   )
@@ -294,21 +323,12 @@ function EmptyState() {
   const t = useT()
   return (
     <div className="h-full flex flex-col items-center justify-center text-center px-6">
-      <div className="h-12 w-12 rounded-full bg-surface-2 flex items-center justify-center mb-4">
-        <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-fg-dim">
-          <path
-            d="M3 17l4-4 4 4 6-6 4 4"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </div>
-      <p className="text-sm font-medium text-fg mb-1.5">
+      <p className="text-sm font-medium text-fg mb-1">
         {t('chart.empty.title')}
       </p>
-      <p className="text-xs text-fg-muted max-w-sm">{t('chart.empty.hint')}</p>
+      <p className="text-xs text-fg-muted max-w-sm">
+        {t('chart.empty.hint')}
+      </p>
     </div>
   )
 }

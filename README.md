@@ -148,6 +148,66 @@ src/
 | `npm run preview` | Preview the production build       |
 | `npm run lint`    | ESLint on `src/`                   |
 
+## Docker
+
+The repo ships a multi-stage `Dockerfile` (Node build → Nginx serve) plus a
+`docker-compose.yml` for convenience.
+
+### Architecture
+
+- **Build stage** (`node:20-alpine`) installs deps and runs `npm run build`.
+  `VITE_BASE_PATH` is intentionally empty in the image so the SPA always
+  calls `/api/*` relative to its own origin.
+- **Runtime stage** (`nginx:1.27-alpine`) serves the built bundle with:
+  - SPA fallback (`try_files … /index.html`) so React Router routes work
+  - gzip + long-cache headers for `/assets/*`
+  - reverse proxy `/api/*` → `${BACKEND_URL}` (substituted at container start)
+  - `/healthz` endpoint for liveness checks
+
+### Quick start (docker compose)
+
+Set up `.env` first (the compose file reads from it), then:
+
+```bash
+docker compose up --build      # http://localhost:8080
+```
+
+Variables consumed by compose (all optional except the Firebase key):
+
+| Variable                 | Used as | Default |
+| ------------------------ | ------- | ------- |
+| `VITE_FIREBASE_KEY`      | build-time API key | _empty — must be set_ |
+| `VITE_CLIENT_TYPE`       | build-time | `CLIENT_TYPE_WEB` |
+| `VITE_STATS_PATH_PREFIX` | build-time | `/api/v1/stats` |
+| `VITE_BASE_PATH`         | runtime `BACKEND_URL` for nginx proxy | `http://172.90.10.13:9910` |
+| `PORT`                   | host port | `8080` |
+
+### Manual build / run
+
+```bash
+docker build -t leadscope:latest \
+  --build-arg VITE_FIREBASE_KEY=AIzaSy... \
+  --build-arg VITE_CLIENT_TYPE=CLIENT_TYPE_WEB \
+  .
+
+docker run --rm -p 8080:80 \
+  -e BACKEND_URL=http://172.90.10.13:9910 \
+  leadscope:latest
+```
+
+Then open `http://localhost:8080`.
+
+### Switching backends without rebuilding
+
+Because the backend host is a **runtime** env var, the same image can be
+deployed against staging / prod by just changing `BACKEND_URL`:
+
+```bash
+docker run --rm -p 8080:80 \
+  -e BACKEND_URL=https://staging.your-domain.com \
+  leadscope:latest
+```
+
 ## Design notes
 
 - **Aesthetic:** editorial dark — Bloomberg desk meets a printed magazine.

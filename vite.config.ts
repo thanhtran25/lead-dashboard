@@ -31,5 +31,29 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy,
     },
+    build: {
+      // Split heavy vendor libs into their own cache-friendly chunks so the
+      // first paint of /login is not held back by recharts/d3.
+      rollupOptions: {
+        output: {
+          manualChunks: (id) => {
+            if (!id.includes('node_modules')) return undefined
+            if (id.includes('recharts') || id.includes('victory-vendor'))
+              return 'charts'
+            if (id.includes('@tanstack/react-query')) return 'query'
+            if (id.includes('react-router')) return 'router'
+            if (
+              id.includes('react/') ||
+              id.includes('react-dom') ||
+              id.includes('scheduler')
+            )
+              return 'react'
+            if (id.includes('date-fns')) return 'dates'
+            return 'vendor'
+          },
+        },
+      },
+      chunkSizeWarningLimit: 600,
+    },
   }
 })

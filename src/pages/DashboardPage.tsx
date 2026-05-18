@@ -3,12 +3,17 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { format, subDays } from 'date-fns'
 
-import Header from '@/components/Header'
-import FilterBar from '@/components/FilterBar'
-import KpiCards from '@/components/KpiCard'
-import LeadsChart from '@/components/LeadsChart'
+import Sidebar from '@/components/Sidebar'
+import TopBar from '@/components/TopBar'
+import WelcomeRow from '@/components/WelcomeRow'
+import NavTabs from '@/components/NavTabs'
+import FilterStrip from '@/components/FilterStrip'
+import MiniWidgets from '@/components/MiniWidgets'
+import ChannelBreakdown from '@/components/ChannelBreakdown'
+import StatusDonut from '@/components/StatusDonut'
+import VolumeCard from '@/components/VolumeCard'
+import SubChannelsCard from '@/components/SubChannelsCard'
 import DataTable from '@/components/DataTable'
-import DebugPanel from '@/components/DebugPanel'
 
 import { useAuth } from '@/lib/auth'
 import { ApiError, fetchLeadStats } from '@/lib/api'
@@ -29,21 +34,35 @@ function defaultFilters(): StatsFilters {
   }
 }
 
+const VALID_GROUPS = new Set<StatsFilters['groupBy']>(['DAY', 'MONTH', 'YEAR'])
+const VALID_METRICS = new Set<StatsFilters['metric']>([
+  'total',
+  'completed',
+  'processing',
+  'failed',
+])
+
 function loadFilters(): StatsFilters {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return defaultFilters()
     const parsed = JSON.parse(raw) as Partial<StatsFilters>
-    const fallback = defaultFilters()
+    const fb = defaultFilters()
     return {
       channelTypes:
         parsed.channelTypes && parsed.channelTypes.length > 0
           ? parsed.channelTypes
-          : fallback.channelTypes,
-      groupBy: parsed.groupBy ?? fallback.groupBy,
-      from: parsed.from ?? fallback.from,
-      to: parsed.to ?? fallback.to,
-      metric: parsed.metric ?? fallback.metric,
+          : fb.channelTypes,
+      groupBy:
+        parsed.groupBy && VALID_GROUPS.has(parsed.groupBy)
+          ? parsed.groupBy
+          : fb.groupBy,
+      from: parsed.from ?? fb.from,
+      to: parsed.to ?? fb.to,
+      metric:
+        parsed.metric && VALID_METRICS.has(parsed.metric)
+          ? parsed.metric
+          : fb.metric,
     }
   } catch {
     return defaultFilters()
@@ -112,89 +131,98 @@ export default function DashboardPage() {
     [parsed, visibleChannels, filters.metric],
   )
 
-  const groupLabel =
-    filters.groupBy === 'DAY'
-      ? t('filter.group.day')
-      : filters.groupBy === 'WEEK'
-        ? t('filter.group.week')
-        : t('filter.group.month')
-
-  const rangeLabel = `${filters.from} → ${filters.to}`
-  const lastUpdated = query.dataUpdatedAt ? new Date(query.dataUpdatedAt) : null
   const errorMessage =
     query.error instanceof Error ? query.error.message : null
 
-  const diagnostics = {
-    buckets: parsed.buckets.length,
-    channels: parsed.channels,
-    total: summary.status.total,
-  }
-
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header lastUpdated={lastUpdated} />
+    <div className="min-h-screen flex bg-bg">
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        <TopBar />
 
-      <main className="mx-auto w-full max-w-[1480px] px-6 py-8 space-y-6">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-semibold text-fg tracking-tight">
-              {t('page.title')}
-            </h1>
-            <p className="text-sm text-fg-muted mt-1">
-              {t('page.subtitle', {
-                from: filters.from,
-                to: filters.to,
-                group: groupLabel.toLowerCase(),
-                channels: filters.channelTypes.join(' · '),
-              })}
-            </p>
+        {/* Sticky page header — sits right below TopBar (h-16) and keeps
+            the welcome line + metric tabs in view while the user scrolls. */}
+        <div className="sticky top-16 z-20 bg-bg/90 backdrop-blur border-b border-line">
+          <div className="px-6 lg:px-8 pt-5 pb-3 space-y-5">
+            <WelcomeRow filters={filters} onChange={setFilters} />
+            <NavTabs
+              active={filters.metric}
+              onChange={(m) => setFilters({ ...filters, metric: m })}
+            />
           </div>
         </div>
 
-        <FilterBar
-          filters={filters}
-          onChange={setFilters}
-          onRefresh={() => query.refetch()}
-          isFetching={query.isFetching}
-          refreshIntervalMs={refreshIntervalMs}
-          onRefreshIntervalChange={setRefreshIntervalMs}
-        />
+        <main className="flex-1 px-6 lg:px-8 py-6 space-y-6">
+          <FilterStrip
+            filters={filters}
+            onChange={setFilters}
+            onRefresh={() => query.refetch()}
+            isFetching={query.isFetching}
+            refreshIntervalMs={refreshIntervalMs}
+            onRefreshIntervalChange={setRefreshIntervalMs}
+          />
 
-        {errorMessage && (
-          <div className="card border-signal-red/40 bg-signal-red/5 p-5">
-            <p className="text-sm font-semibold text-signal-red mb-1">
-              {t('error.title')}
-            </p>
-            <p className="text-xs text-fg-muted">{errorMessage}</p>
-            <button onClick={() => query.refetch()} className="btn-ghost mt-4">
-              {t('error.retry')}
-            </button>
+          {errorMessage && (
+            <div className="card border-signal-red/40 bg-signal-red/5 p-5">
+              <p className="text-sm font-semibold text-signal-red mb-1">
+                {t('error.title')}
+              </p>
+              <p className="text-xs text-fg-muted">{errorMessage}</p>
+              <button
+                onClick={() => query.refetch()}
+                className="btn-ghost mt-4"
+              >
+                {t('error.retry')}
+              </button>
+            </div>
+          )}
+
+          <MiniWidgets
+            buckets={parsed.buckets}
+            channels={visibleChannels}
+            activeMetric={filters.metric}
+            onSelectMetric={(m) => setFilters({ ...filters, metric: m })}
+          />
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <ChannelBreakdown
+                buckets={parsed.buckets}
+                channels={visibleChannels}
+                metric={filters.metric}
+              />
+            </div>
+            <StatusDonut summary={summary} />
           </div>
-        )}
 
-        <KpiCards summary={summary} rangeLabel={rangeLabel} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <VolumeCard
+              buckets={parsed.buckets}
+              channels={visibleChannels}
+              metric={filters.metric}
+              groupBy={filters.groupBy}
+            />
+            <SubChannelsCard
+              buckets={parsed.buckets}
+              subChannels={parsed.subChannels}
+              metric={filters.metric}
+            />
+          </div>
 
-        <LeadsChart
-          buckets={parsed.buckets}
-          channels={visibleChannels}
-          metric={filters.metric}
-        />
+          <DataTable
+            buckets={parsed.buckets}
+            channels={visibleChannels}
+            filename={`leadscope_${filters.from}_${filters.to}_${filters.groupBy}.csv`}
+          />
 
-        <DataTable
-          buckets={parsed.buckets}
-          channels={visibleChannels}
-          filename={`leadscope_${filters.from}_${filters.to}_${filters.groupBy}.csv`}
-        />
-
-        <DebugPanel raw={query.data ?? null} diagnostics={diagnostics} />
-
-        <footer className="pt-4 pb-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-t border-line text-[11px] text-fg-dim">
-          <span>© {new Date().getFullYear()} LeadScope</span>
-          <span className="num">
-            {query.isFetching ? t('misc.streaming') : t('misc.idle')}
-          </span>
-        </footer>
-      </main>
+          <footer className="pt-4 pb-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-t border-line text-[11px] text-fg-dim">
+            <span>© {new Date().getFullYear()} LeadScope</span>
+            <span className="num">
+              {query.isFetching ? t('misc.streaming') : t('misc.idle')}
+            </span>
+          </footer>
+        </main>
+      </div>
     </div>
   )
 }

@@ -1,0 +1,25 @@
+services:
+  dashboard:
+    image: leadscope:latest
+    container_name: leadscope
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Public Firebase Web API key — baked into the bundle at build time.
+        VITE_FIREBASE_KEY: ${VITE_FIREBASE_KEY:-}
+        VITE_CLIENT_TYPE: ${VITE_CLIENT_TYPE:-CLIENT_TYPE_WEB}
+        VITE_STATS_PATH_PREFIX: ${VITE_STATS_PATH_PREFIX:-/api/v1/stats}
+    ports:
+      - "${PORT:-8080}:80"
+    environment:
+      # Backend URL used by nginx to reverse-proxy /api/* requests.
+      # Override at run time to point to a different environment.
+      BACKEND_URL: ${VITE_BASE_PATH:-http://172.90.10.13:9910}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s

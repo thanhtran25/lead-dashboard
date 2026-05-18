@@ -4,59 +4,67 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Inter', 'Roboto', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       colors: {
-        // Surfaces — Linear/Vercel style. Bg is near-black, surfaces step up.
-        bg: '#0a0a0c',
+        // Dark mode palette inspired by Bracket Admin (purple sidebar)
+        bg: '#0a0815',
+        sidebar: '#1a0d33',
+        sidebar2: '#231245',
+        topbar: '#15111f',
         surface: {
-          1: '#101013',
-          2: '#16161a',
-          3: '#1c1c22',
+          1: '#15111f',
+          2: '#1c1730',
+          3: '#251f3c',
         },
         line: {
           DEFAULT: 'rgba(255,255,255,0.06)',
           strong: 'rgba(255,255,255,0.10)',
         },
         fg: {
-          DEFAULT: '#ededed',
-          muted: '#9a9aa1',
-          dim: '#6a6a72',
-          faint: '#48484f',
+          DEFAULT: '#ffffff',
+          muted: '#a09aba',
+          dim: '#6f6889',
+          faint: '#4a4560',
         },
-        // Brand accent — Linear-style indigo/violet
+        // Brand purples
         brand: {
           DEFAULT: '#7c5cff',
-          hover: '#9379ff',
-          dim: '#5641d6',
+          hover: '#9a82ff',
+          dim: '#5c44d6',
+          soft: '#b39ddb',
         },
         signal: {
-          red: '#f87171',
-          amber: '#fbbf24',
           green: '#34d399',
+          greenSoft: 'rgba(52,211,153,0.15)',
+          red: '#f87171',
+          redSoft: 'rgba(248,113,113,0.15)',
+          amber: '#fbbf24',
+          amberSoft: 'rgba(251,191,36,0.15)',
+          blue: '#60a5fa',
+          blueSoft: 'rgba(96,165,250,0.15)',
         },
-        // Chart palette — distinct, modern, dark-bg friendly
         chart: {
-          ikis: '#34d399', // emerald
-          wts: '#fb923c', // orange
-          dx: '#60a5fa', // blue
-          alt1: '#a78bfa', // violet
-          alt2: '#f472b6', // pink
-          alt3: '#facc15', // yellow
+          ikis: '#34d399',
+          wts: '#fb923c',
+          dx: '#60a5fa',
+          alt1: '#a78bfa',
+          alt2: '#f472b6',
+          alt3: '#facc15',
         },
       },
       letterSpacing: {
         ultra: '0.18em',
       },
       boxShadow: {
-        card: '0 1px 0 rgba(255,255,255,0.04) inset, 0 1px 2px rgba(0,0,0,0.4)',
-        glow: '0 0 0 1px rgba(124,92,255,0.30), 0 20px 60px -20px rgba(124,92,255,0.25)',
+        card: '0 1px 0 rgba(255,255,255,0.04) inset, 0 2px 8px rgba(0,0,0,0.35)',
+        glow: '0 0 0 1px rgba(124,92,255,0.28), 0 20px 60px -20px rgba(124,92,255,0.30)',
       },
       borderRadius: {
-        DEFAULT: '8px',
-        lg: '12px',
-        xl: '16px',
+        DEFAULT: '6px',
+        lg: '10px',
+        xl: '14px',
       },
       keyframes: {
         fadeIn: {
@@ -69,7 +77,7 @@ export default {
         },
       },
       animation: {
-        'fade-in': 'fadeIn 0.4s ease-out both',
+        'fade-in': 'fadeIn 0.35s ease-out both',
         'pulse-dot': 'pulseDot 1.6s ease-in-out infinite',
       },
     },

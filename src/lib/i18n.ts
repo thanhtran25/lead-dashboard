@@ -26,6 +26,35 @@ const STRINGS = {
     'header.operator': 'Tài khoản',
     'header.lastFetch': 'Cập nhật lần cuối',
     'header.systemTime': 'Thời gian hệ thống',
+    'header.search': 'Tìm kiếm…',
+
+    'sidebar.mainMenu': 'Menu chính',
+    'sidebar.dashboard': 'Bảng điều khiển',
+
+    'tabs.overview': 'Tổng quan',
+    'tabs.channels': 'Theo kênh',
+    'tabs.status': 'Theo trạng thái',
+    'tabs.detail': 'Chi tiết',
+
+    'breakdown.title': 'Lead theo kênh',
+    'breakdown.subtitle':
+      'Tỉ trọng lead trên từng kênh trong khoảng thời gian đã chọn.',
+    'breakdown.empty': 'Chưa có dữ liệu kênh nào trong khoảng này.',
+
+    'donut.title': 'Phân bố trạng thái',
+    'donut.subtitle':
+      'Tỉ lệ lead theo trạng thái: hoàn thành, đang xử lý, thất bại.',
+    'donut.center': 'Hoàn thành',
+
+    'volume.title': 'Xu hướng theo thời gian',
+    'volume.subtitle': 'Biểu đồ lead theo {group}.',
+    'volume.users': 'Tổng',
+    'volume.pageviews': 'Hoàn thành',
+    'volume.sessions': 'Đang xử lý',
+
+    'subchannel.title': 'Sub-channel',
+    'subchannel.subtitle': 'Chi tiết theo từng kênh con (ví dụ MTS.V2.AOS).',
+    'subchannel.empty': 'Không có sub-channel nào trong khoảng này.',
 
     'section.filters': 'Bộ lọc',
     'section.overview': 'Tổng quan',
@@ -42,8 +71,8 @@ const STRINGS = {
     'filter.preset.30d': '30 NGÀY',
     'filter.preset.90d': '90 NGÀY',
     'filter.group.day': 'Ngày',
-    'filter.group.week': 'Tuần',
     'filter.group.month': 'Tháng',
+    'filter.group.year': 'Năm',
     'filter.refresh': 'Làm mới',
     'filter.fetching': 'Đang tải…',
     'filter.auto.off': 'Tự động · Tắt',
@@ -142,6 +171,36 @@ const STRINGS = {
     'header.operator': 'Operator',
     'header.lastFetch': 'Last fetch',
     'header.systemTime': 'System time',
+    'header.search': 'Search…',
+
+    'sidebar.mainMenu': 'Main Menu',
+    'sidebar.dashboard': 'Dashboard',
+
+    'tabs.overview': 'Overview',
+    'tabs.channels': 'By Channel',
+    'tabs.status': 'By Status',
+    'tabs.detail': 'Detail',
+
+    'breakdown.title': 'Leads by channel',
+    'breakdown.subtitle':
+      'Share of leads across channels for the selected period.',
+    'breakdown.empty': 'No channel data in this range.',
+
+    'donut.title': 'Status distribution',
+    'donut.subtitle':
+      'Lead status split — completed, processing, failed.',
+    'donut.center': 'Completed',
+
+    'volume.title': 'Volume over time',
+    'volume.subtitle': 'Lead trend grouped by {group}.',
+    'volume.users': 'Total',
+    'volume.pageviews': 'Completed',
+    'volume.sessions': 'Processing',
+
+    'subchannel.title': 'Sub-channels',
+    'subchannel.subtitle':
+      'Detail per sub-channel (e.g. MTS.V2.AOS).',
+    'subchannel.empty': 'No sub-channels in this range.',
 
     'section.filters': 'Filters',
     'section.overview': 'Overview',
@@ -158,8 +217,8 @@ const STRINGS = {
     'filter.preset.30d': '30D',
     'filter.preset.90d': '90D',
     'filter.group.day': 'Day',
-    'filter.group.week': 'Week',
     'filter.group.month': 'Month',
+    'filter.group.year': 'Year',
     'filter.refresh': 'Refresh',
     'filter.fetching': 'Fetching…',
     'filter.auto.off': 'Auto · Off',
