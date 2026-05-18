@@ -1,17 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  addDays,
+  endOfMonth,
   format,
+  isBefore,
+  isSameDay,
+  isValid,
   parseISO,
   startOfMonth,
-  endOfMonth,
   subDays,
   subMonths,
-  isValid,
 } from 'date-fns'
-import { DayPicker, type DateRange } from 'react-day-picker'
 import { vi as viLocale, enUS as enLocale } from 'date-fns/locale'
+import { DayPicker } from 'react-day-picker'
 
 import { useLocale, useT, type TKey } from '@/lib/i18n'
+
+/* -------------------------------------------------------------------------- */
+/* Constants                                                                  */
+/* -------------------------------------------------------------------------- */
+
+const ISO = 'yyyy-MM-dd'
+const DISPLAY = 'dd/MM/yyyy'
 
 interface Preset {
   id: string
@@ -74,8 +84,9 @@ const PRESETS: Preset[] = [
   },
 ]
 
-const ISO = 'yyyy-MM-dd'
-const DISPLAY = 'dd/MM/yyyy'
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
 
 function safeParse(s: string | undefined): Date | undefined {
   if (!s) return undefined
@@ -83,20 +94,20 @@ function safeParse(s: string | undefined): Date | undefined {
   return isValid(d) ? d : undefined
 }
 
-function sameDay(a?: Date, b?: Date): boolean {
+function sameDay(a: Date | undefined, b: Date | undefined): boolean {
   if (!a || !b) return false
-  return format(a, ISO) === format(b, ISO)
+  return isSameDay(a, b)
 }
 
-function isComplete(
-  r: DateRange | undefined,
-): r is { from: Date; to: Date } {
-  return r?.from instanceof Date && r?.to instanceof Date
-}
+/* -------------------------------------------------------------------------- */
+/* Component                                                                  */
+/* -------------------------------------------------------------------------- */
+
+type Phase = 'pick-start' | 'pick-end'
 
 export default function DateRangePicker({
-  from,
-  to,
+  from: fromProp,
+  to: toProp,
   onChange,
 }: {
   from: string
@@ -108,20 +119,41 @@ export default function DateRangePicker({
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const [open, setOpen] = useState(false)
 
-  const propRange: DateRange = useMemo(
-    () => ({ from: safeParse(from), to: safeParse(to) }),
-    [from, to],
-  )
-  const [draft, setDraft] = useState<DateRange | undefined>(propRange)
+  // Parsed parent props.
+  const propFrom = useMemo(() => safeParse(fromProp), [fromProp])
+  const propTo = useMemo(() => safeParse(toProp), [toProp])
 
-  // When the picker re-opens, snapshot the parent's current range as the
-  // working draft. We deliberately don't touch the draft while open so the
-  // user can click freely without their state being overwritten.
-  useEffect(() => {
-    if (open) setDraft(propRange)
-  }, [open, propRange])
+  // -- Local draft state. The parent props are NOT touched until "Apply". --
+  //
+  // We deliberately roll our own 2-phase state machine instead of using
+  // react-day-picker's `mode="range"`: the library's built-in logic does
+  // things like "complete a 1-day range on first click" or "extend an
+  // existing range when clicking past it" which led to the picker feeling
+  // unpredictable. Here every click does exactly one of two things:
+  //
+  //   pick-start phase → set start, clear end, advance to pick-end
+  //   pick-end phase   → set end (with auto-swap), advance back to pick-start
+  //
+  // So the user can always start over by clicking once more.
+  const [phase, setPhase] = useState<Phase>('pick-start')
+  const [draftFrom, setDraftFrom] = useState<Date | undefined>(propFrom)
+  const [draftTo, setDraftTo] = useState<Date | undefined>(propTo)
+  const [hovered, setHovered] = useState<Date | undefined>(undefined)
+  const [month, setMonth] = useState<Date>(() => propFrom ?? new Date())
 
+  /* Reset draft every time the popover opens. */
   useEffect(() => {
+    if (!open) return
+    setDraftFrom(propFrom)
+    setDraftTo(propTo)
+    setPhase('pick-start')
+    setHovered(undefined)
+    setMonth(propTo ?? propFrom ?? new Date())
+  }, [open, propFrom, propTo])
+
+  /* Click outside → close (without committing). */
+  useEffect(() => {
+    if (!open) return
     function onDocClick(e: MouseEvent) {
       if (
         wrapperRef.current &&
@@ -130,53 +162,118 @@ export default function DateRangePicker({
         setOpen(false)
       }
     }
-    if (open) document.addEventListener('mousedown', onDocClick)
+    document.addEventListener('mousedown', onDocClick)
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [open])
 
-  const activePresetId = useMemo(() => {
-    if (!isComplete(propRange)) return null
-    for (const p of PRESETS) {
-      const built = p.build()
-      if (sameDay(built.from, propRange.from) && sameDay(built.to, propRange.to))
-        return p.id
+  /* ESC → close. */
+  useEffect(() => {
+    if (!open) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
     }
-    return null
-  }, [propRange])
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open])
 
-  function commit(next: DateRange) {
-    if (!isComplete(next)) return
-    onChange(format(next.from, ISO), format(next.to, ISO))
+  /* ------------------------------ click flow ----------------------------- */
+
+  function handleDayClick(
+    date: Date,
+    modifiers: { disabled?: boolean },
+  ) {
+    if (modifiers?.disabled) return
+
+    if (phase === 'pick-start') {
+      setDraftFrom(date)
+      setDraftTo(undefined)
+      setPhase('pick-end')
+      setHovered(date)
+      return
+    }
+
+    // pick-end phase
+    if (!draftFrom) {
+      // shouldn't happen, but recover gracefully
+      setDraftFrom(date)
+      setPhase('pick-end')
+      return
+    }
+    if (isBefore(date, draftFrom)) {
+      // clicked earlier than start → auto-swap
+      setDraftTo(draftFrom)
+      setDraftFrom(date)
+    } else {
+      setDraftTo(date)
+    }
+    setPhase('pick-start')
+    setHovered(undefined)
+  }
+
+  function commit(f: Date, t2: Date) {
+    onChange(format(f, ISO), format(t2, ISO))
     setOpen(false)
+  }
+
+  function applyDraft() {
+    if (!draftFrom || !draftTo) return
+    commit(draftFrom, draftTo)
+  }
+
+  function clearDraft() {
+    setDraftFrom(undefined)
+    setDraftTo(undefined)
+    setPhase('pick-start')
+    setHovered(undefined)
   }
 
   function applyPreset(p: Preset) {
     const built = p.build()
-    commit({ from: built.from, to: built.to })
+    commit(built.from, built.to)
   }
 
-  function applyDraft() {
-    if (!isComplete(draft)) return
-    commit(draft)
+  /* ------------------------------ rendering ------------------------------ */
+
+  // Visual range: if we're mid-selection (pick-end with no `to` yet), the
+  // preview is anchored at the hovered cell so the user sees the range form
+  // as they move the mouse.
+  const previewEnd =
+    phase === 'pick-end' && draftFrom && !draftTo ? hovered : undefined
+  let visualStart = draftFrom
+  let visualEnd = draftTo ?? previewEnd
+  if (visualStart && visualEnd && isBefore(visualEnd, visualStart)) {
+    ;[visualStart, visualEnd] = [visualEnd, visualStart]
   }
 
-  function clearDraft() {
-    setDraft(undefined)
-  }
+  const middle = useMemo(() => {
+    if (!visualStart || !visualEnd) return undefined
+    if (sameDay(visualStart, visualEnd)) return undefined
+    return { from: addDays(visualStart, 1), to: subDays(visualEnd, 1) }
+  }, [visualStart, visualEnd])
+
+  const activePresetId = useMemo(() => {
+    if (!propFrom || !propTo) return null
+    for (const p of PRESETS) {
+      const built = p.build()
+      if (sameDay(built.from, propFrom) && sameDay(built.to, propTo)) return p.id
+    }
+    return null
+  }, [propFrom, propTo])
 
   const triggerLabel = (() => {
-    const f = safeParse(from)
-    const tt = safeParse(to)
-    if (!f || !tt) return ''
-    return `${format(f, DISPLAY)} — ${format(tt, DISPLAY)}`
+    if (!propFrom || !propTo) return ''
+    return `${format(propFrom, DISPLAY)} — ${format(propTo, DISPLAY)}`
+  })()
+
+  const hintLabel = (() => {
+    if (phase === 'pick-start' || !draftFrom) return t('picker.pickStart')
+    return t('picker.pickEnd')
   })()
 
   const draftLabel = (() => {
-    const df = draft?.from
-    if (!df) return t('picker.placeholder')
-    const dt = draft?.to
-    if (!dt) return `${format(df, DISPLAY)} — ?`
-    return `${format(df, DISPLAY)} — ${format(dt, DISPLAY)}`
+    if (!draftFrom) return null
+    if (!draftTo) return `${format(draftFrom, DISPLAY)} — ?`
+    return `${format(draftFrom, DISPLAY)} — ${format(draftTo, DISPLAY)}`
   })()
 
   return (
@@ -201,19 +298,42 @@ export default function DateRangePicker({
       {open && (
         <div
           role="dialog"
+          aria-label={t('filter.dateRange')}
           className="absolute left-0 top-full mt-2 z-40 card p-0 animate-fade-in flex flex-col"
         >
           <div className="flex">
             <div className="p-3">
+              <p className="eyebrow px-1 mb-2 flex items-center gap-2">
+                <span
+                  className={
+                    'h-1.5 w-1.5 rounded-full ' +
+                    (phase === 'pick-start' ? 'bg-brand' : 'bg-signal-amber')
+                  }
+                />
+                {hintLabel}
+              </p>
               <DayPicker
-                mode="range"
                 numberOfMonths={1}
                 showOutsideDays
                 fixedWeeks
                 weekStartsOn={1}
                 locale={locale === 'vi' ? viLocale : enLocale}
-                selected={draft}
-                onSelect={setDraft}
+                month={month}
+                onMonthChange={setMonth}
+                disabled={{ after: today() }}
+                onDayClick={handleDayClick}
+                onDayMouseEnter={(day) => setHovered(day)}
+                onDayMouseLeave={() => setHovered(undefined)}
+                modifiers={{
+                  rs: visualStart ? [visualStart] : [],
+                  re: visualEnd ? [visualEnd] : [],
+                  rm: middle ?? [],
+                }}
+                modifiersClassNames={{
+                  rs: '[&_button]:bg-brand [&_button]:text-white [&_button]:hover:bg-brand-hover',
+                  re: '[&_button]:bg-brand [&_button]:text-white [&_button]:hover:bg-brand-hover',
+                  rm: '[&_button]:bg-brand/15 [&_button]:text-fg [&_button]:rounded-none [&_button]:hover:bg-brand/25',
+                }}
                 classNames={{
                   root: 'rdp-root text-sm select-none',
                   months: 'flex gap-4',
@@ -233,18 +353,11 @@ export default function DateRangePicker({
                   week: 'flex',
                   day: 'flex-1 p-0',
                   day_button:
-                    'w-9 h-9 num text-sm text-fg-muted rounded-md hover:bg-surface-2 hover:text-fg transition-colors disabled:opacity-30 disabled:cursor-not-allowed',
+                    'w-9 h-9 num text-sm text-fg-muted rounded-md hover:bg-surface-2 hover:text-fg transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent',
                   today:
                     'after:content-[""] relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:h-1 after:w-1 after:rounded-full after:bg-brand',
-                  selected: '',
-                  range_start:
-                    '[&_button]:bg-brand [&_button]:text-white [&_button]:hover:bg-brand-hover',
-                  range_end:
-                    '[&_button]:bg-brand [&_button]:text-white [&_button]:hover:bg-brand-hover',
-                  range_middle:
-                    '[&_button]:bg-brand/15 [&_button]:text-fg [&_button]:rounded-none [&_button]:hover:bg-brand/25',
                   outside: 'text-fg-faint',
-                  disabled: 'opacity-30',
+                  disabled: 'opacity-30 cursor-not-allowed',
                   hidden: 'invisible',
                 }}
               />
@@ -275,14 +388,14 @@ export default function DateRangePicker({
 
           <div className="border-t border-line px-3 py-2.5 flex items-center justify-between gap-3">
             <span className="num text-xs text-fg-muted">
-              {draftLabel}
+              {draftLabel ?? hintLabel}
             </span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={clearDraft}
                 className="btn-ghost"
-                disabled={!draft?.from}
+                disabled={!draftFrom}
               >
                 {t('picker.clear')}
               </button>
@@ -290,7 +403,7 @@ export default function DateRangePicker({
                 type="button"
                 onClick={applyDraft}
                 className="btn-primary h-9 px-4 text-xs"
-                disabled={!isComplete(draft)}
+                disabled={!draftFrom || !draftTo}
               >
                 {t('picker.apply')}
               </button>
@@ -301,6 +414,10 @@ export default function DateRangePicker({
     </div>
   )
 }
+
+/* -------------------------------------------------------------------------- */
+/* Icons                                                                      */
+/* -------------------------------------------------------------------------- */
 
 function CalendarIcon() {
   return (

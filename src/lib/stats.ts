@@ -70,7 +70,6 @@ export function parseStats(raw: unknown, filters: StatsFilters): ParsedStats {
         channels.add(typeName)
 
         const subs = pickArr(grp, ['channels', 'items', 'subChannels'])
-        const typeAgg: ChannelStats = bucket.channels[typeName] ?? emptyStats()
         for (const sub of subs) {
           if (!sub || typeof sub !== 'object') continue
           const s = sub as Record<string, unknown>
@@ -85,7 +84,13 @@ export function parseStats(raw: unknown, filters: StatsFilters): ParsedStats {
           if (stats.total === 0) {
             stats.total = stats.completed + stats.processing + stats.failed
           }
-          bucket.channels[typeName] = addStats(typeAgg, stats)
+          // Re-read the current type aggregate every iteration so each
+          // sub-channel ADDS to the running sum instead of replacing the
+          // previous one (which collapsed to the last sub-channel's value).
+          bucket.channels[typeName] = addStats(
+            bucket.channels[typeName] ?? emptyStats(),
+            stats,
+          )
           if (subName) {
             const fullKey = `${typeName}:${subName}`
             subChannels.add(fullKey)
