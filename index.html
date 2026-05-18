@@ -16,6 +16,9 @@
   </head>
   <body class="bg-bg text-fg antialiased">
     <div id="root"></div>
+    <!-- Runtime config — overwritten at container start with values from
+         platform env vars. Must load before the main bundle. -->
+    <script src="/config.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

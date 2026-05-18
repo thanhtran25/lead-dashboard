@@ -210,81 +210,83 @@ docker run --rm -p 8080:8000 \
   leadscope:latest
 ```
 
+## Runtime configuration
+
+In production the SPA reads configuration at **container start**, not at
+build time. This means the same image deploys to every environment — only
+the env vars on the platform change.
+
+How it works:
+
+1. The container entrypoint runs `docker/40-write-config-js.sh`, which
+   renders `/usr/share/nginx/html/config.js` from env vars.
+2. `index.html` loads `/config.js` _before_ the main bundle, so by the time
+   the React app boots it can read `window.__APP_CONFIG__`.
+3. `src/lib/env.ts` prefers `window.__APP_CONFIG__` and falls back to
+   `import.meta.env.VITE_*` (used in `npm run dev` only).
+4. nginx serves `/config.js` with `Cache-Control: no-store` so a redeploy
+   with a different value takes effect immediately.
+
 ## Deploying on Koyeb
 
-Koyeb builds the Dockerfile straight from your Git repo. Configure it like
-this in the Koyeb dashboard (Service settings):
+Koyeb builds the Dockerfile straight from your Git repo. Because all
+configuration is runtime, you only need **one** section:
 
-### 1) Build arguments — Vite envs (baked into the JS bundle)
+### Environment variables (the only thing you set)
 
-`Settings → Build → Build arguments`
+`Service settings → Environment variables and files`
 
 | Name                     | Value (example)                              |
 | ------------------------ | -------------------------------------------- |
 | `VITE_FIREBASE_KEY`      | `AIzaSyA6xvEC1_IGN6DZGPvTkzzV5WZfvdarta8`    |
 | `VITE_CLIENT_TYPE`       | `CLIENT_TYPE_WEB`                            |
 | `VITE_STATS_PATH_PREFIX` | `/api/v1/stats`                              |
+| `BACKEND_URL`            | `http://172.90.10.13:9910`                   |
 
-These are read at `npm run build` time and become part of the static JS
-files. Changing them later requires redeploying.
+> **Do not** set `VITE_BASE_PATH`. The SPA always calls `/api/*` relative
+> to its own origin and nginx forwards to `BACKEND_URL`. That's the whole
+> point of the runtime-config setup: switching backends never requires a
+> rebuild.
 
-> **Do NOT set `VITE_BASE_PATH` here.** The image is built with it empty on
-> purpose — the SPA always calls `/api/*` relative to its own origin and
-> nginx handles the upstream forwarding at runtime.
-
-### 2) Environment variables — runtime config (nginx)
-
-`Settings → Environment variables`
-
-| Name          | Value (example)                  | Note |
-| ------------- | -------------------------------- | ---- |
-| `BACKEND_URL` | `http://172.90.10.13:9910`       | Where nginx proxies every `/api/*` request. Change anytime, no rebuild needed. |
-
-The container's `PORT` defaults to `8000`, which matches Koyeb's default
-service port — so you don't need to set anything else. If you've customised
-Koyeb's port, add `PORT=<your-port>` here and nginx will follow.
-
-### 3) Health check
+### Health check
 
 `Settings → Health checks`
 
-- Protocol: HTTP
-- Path: `/healthz`
-- Port: `8000` (or whatever you set `PORT` to)
+- Protocol: HTTP, Path: `/healthz`, Port: `8000` (the container default)
 
-### 4) Region & networking
+### Ports
+
+`Settings → Ports`
+
+- Container port: `8000` — already exposed by the image; nothing to change.
+
+### Networking note
 
 `http://172.90.10.13:9910` is a **private/VPN-only IP**. Koyeb's public
-build/runtime workers cannot reach it. You have two choices:
+runtime cannot reach it. Options:
 
-- **Expose the backend publicly** behind HTTPS and set `BACKEND_URL` to that
-  public URL (recommended for a real deployment).
-- Or deploy this app on **the same private network** as the backend (Koyeb
-  supports private networking; details in their docs).
+- Expose the backend publicly behind HTTPS, then set `BACKEND_URL` to that.
+- Use Koyeb's private networking and deploy the SPA on the same network.
 
-If you only need a demo, point `BACKEND_URL` at any publicly reachable
-mock/stub of the stats endpoint.
+### Mapping `.env` → Koyeb
 
-### 5) Where the `.env` file fits
+| Var name (in `.env` locally) | Where it goes on Koyeb |
+| ---------------------------- | ---------------------- |
+| `VITE_FIREBASE_KEY`          | Environment variables  |
+| `VITE_CLIENT_TYPE`           | Environment variables  |
+| `VITE_STATS_PATH_PREFIX`     | Environment variables  |
+| `VITE_BASE_PATH`             | **Skip** — use `BACKEND_URL` instead |
 
-You **don't** ship `.env` to Koyeb — it's in `.gitignore` and `.dockerignore`
-on purpose. `.env` is for local `npm run dev` only. In production, Koyeb's
-build-args + env-vars dashboard is the source of truth.
+### Common Koyeb errors
 
-| Var name (in `.env` locally) | Where it goes on Koyeb              |
-| ---------------------------- | ----------------------------------- |
-| `VITE_FIREBASE_KEY`          | Build arguments                     |
-| `VITE_CLIENT_TYPE`           | Build arguments                     |
-| `VITE_STATS_PATH_PREFIX`     | Build arguments                     |
-| `VITE_BASE_PATH`             | **Skip in build**, set as `BACKEND_URL` in Environment variables |
-
-### Common Koyeb build errors
-
-- `tsc … error TS6133: '…' is declared but its value is never read` — there's
-  unused code in `src/`. Run `npm run build` locally first to catch these
-  before pushing; Vite's dev server doesn't run `tsc`.
-- `failed to configure registry cache importer` — harmless, just means there
-  wasn't a cached build to import. The build continues normally.
+- `tsc … error TS6133: '…' is declared but its value is never read` — unused
+  code in `src/`. Run `npm run build` locally before pushing; Vite's dev
+  server doesn't run `tsc`.
+- `TCP health check failed on port 8000` — the container couldn't bind. Make
+  sure you didn't override `PORT` to a different value than the one in the
+  Ports config.
+- `failed to configure registry cache importer` — harmless; just means
+  there wasn't a cached build to import.
 
 ## Design notes
 

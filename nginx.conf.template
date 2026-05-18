@@ -46,6 +46,14 @@ server {
         try_files $uri =404;
     }
 
+    # Runtime config — generated at container start, must NEVER be cached.
+    location = /config.js {
+        add_header Cache-Control "no-store, no-cache, must-revalidate" always;
+        add_header Pragma "no-cache" always;
+        expires off;
+        try_files $uri =404;
+    }
+
     location ~* \.(svg|woff2?|ttf|ico|png|jpg|jpeg|gif|webp)$ {
         expires 30d;
         add_header Cache-Control "public";
