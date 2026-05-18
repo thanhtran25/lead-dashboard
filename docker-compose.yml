@@ -11,14 +11,18 @@ services:
         VITE_CLIENT_TYPE: ${VITE_CLIENT_TYPE:-CLIENT_TYPE_WEB}
         VITE_STATS_PATH_PREFIX: ${VITE_STATS_PATH_PREFIX:-/api/v1/stats}
     ports:
-      - "${PORT:-8080}:80"
+      # Host port → container port. Override the host side via HOST_PORT.
+      - "${HOST_PORT:-8080}:8000"
     environment:
+      # nginx listens on this port inside the container.
+      # Matches Koyeb's default service port.
+      PORT: "8000"
       # Backend URL used by nginx to reverse-proxy /api/* requests.
       # Override at run time to point to a different environment.
       BACKEND_URL: ${VITE_BASE_PATH:-http://172.90.10.13:9910}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/healthz"]
       interval: 30s
       timeout: 3s
       retries: 3

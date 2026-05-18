@@ -2,7 +2,7 @@
 # nginx:alpine entrypoint — ${BACKEND_URL} comes from the runtime env var.
 
 server {
-    listen 80 default_server;
+    listen ${PORT} default_server;
     server_name _;
 
     root /usr/share/nginx/html;
