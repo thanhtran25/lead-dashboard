@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campaign Monitoring Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-sidebar: #3f1199;
+            --bg-body: #f0f2f8;
+            --text-light: #ffffff;
+            --text-dark: #333333;
+            --text-muted: #777777;
+            --purple-accent: #6f42c1;
+            --green-accent: #28a745;
+            --red-accent: #dc3545;
+            --card-bg: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        body {
+            display: flex;
+            background-color: var(--bg-body);
+            color: var(--text-dark);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-sidebar);
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+
+        .logo-section {
+            padding: 0 24px;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .logo-section span {
+            background-color: #fff;
+            color: var(--bg-sidebar);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            margin-bottom: 30px;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background-color: #ccc;
+            margin-right: 12px;
+        }
+
+        .user-info .name {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .user-info .role {
+            font-size: 12px;
+            color: #b39ddb;
+        }
+
+        .menu-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #b39ddb;
+            padding: 10px 24px;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            color: #d1c4e9;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .menu-item:hover, .menu-item.active {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .menu-item.active {
+            border-left: 4px solid #fff;
+            padding-left: 20px;
+        }
+
+        .submenu {
+            list-style: none;
+            padding-left: 20px;
+        }
+
+        .submenu-item {
+            display: block;
+            padding: 10px 24px;
+            color: #b39ddb;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        .submenu-item.active, .submenu-item:hover {
+            color: #fff;
+        }
+
+        /* --- MAIN CONTENT --- */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        /* Top Header */
+        .top-header {
+            background-color: #fff;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            width: 400px;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            font-size: 14px;
+        }
+
+        .header-icons {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .icon-btn {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: var(--red-accent);
+            color: white;
+            font-size: 10px;
+            padding: 2px 5px;
+            border-radius: 50%;
+        }
+
+        /* Dashboard Container */
+        .dashboard-container {
+            padding: 30px;
+        }
+
+        .welcome-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .welcome-text h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .welcome-text p {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .date-range {
+            display: flex;
+            align-items: center;
+            background: #fff;
+            padding: 10px 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            font-size: 14px;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 25px;
+            gap: 20px;
+        }
+
+        .tab {
+            padding: 10px 5px;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab.active {
+            color: var(--purple-accent);
+            border-bottom-color: var(--purple-accent);
+        }
+
+        /* Mini Widgets Grid */
+        .mini-widgets {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 6px;
+            padding: 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .widget-title {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .widget-value-container {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .widget-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .badge-change {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .badge-change.negative {
+            background-color: #fde8e8;
+            color: var(--red-accent);
+        }
+
+        .badge-change.positive {
+            background-color: #def7ec;
+            color: var(--green-accent);
+        }
+
+        .widget-chart-placeholder {
+            margin-top: 15px;
+            height: 40px;
+            border-bottom: 2px solid #e0e0e0; /* Giả lập biểu đồ đường */
+        }
+
+        /* Main Dashboard Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        /* Country Progress Bars */
+        .country-list {
+            margin-top: 15px;
+        }
+
+        .country-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .country-name {
+            width: 120px;
+        }
+
+        .progress-bar-container {
+            flex: 1;
+            background-color: #eef0f5;
+            height: 6px;
+            border-radius: 3px;
+            margin: 0 15px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--purple-accent);
+            border-radius: 3px;
+        }
+
+        .country-val {
+            font-weight: 500;
+            width: 40px;
+            text-align: right;
+        }
+
+        /* Donut Chart Simulation */
+        .donut-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 0;
+        }
+
+        .donut-chart {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: conic-gradient(var(--purple-accent) 65%, #eef0f5 0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .donut-inner {
+            width: 100px;
+            height: 100px;
+            background-color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .donut-legend {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            font-size: 12px;
+        }
+
+        /* Lower Row Grid */
+        .lower-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .metrics-summary {
+            display: flex;
+            gap: 30px;
+            margin-top: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-block h3 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .metric-block p {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .placeholder-big-chart {
+            height: 150px;
+            background: linear-gradient(180deg, rgba(111, 66, 193, 0.1) 0%, rgba(255,255,255,0) 100%);
+            border-bottom: 2px solid var(--purple-accent);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo-section">
+            <span>az</span>a
+        </div>
+        <div class="user-profile">
+            <div class="user-avatar"></div>
+            <div class="user-info">
+                <div class="name">Aziana Pechon</div>
+                <div class="role">Premium Member</div>
+            </div>
+        </div>
+
+        <div class="menu-label">Main Menu</div>
+        <a href="#" class="menu-item active">Dashboard</a>
+        <ul class="submenu">
+            <li><a href="#" class="submenu-item">Web Analytics</a></li>
+            <li><a href="#" class="submenu-item">Sales Monitoring</a></li>
+            <li><a href="#" class="submenu-item">Ad Campaign</a></li>
+            <li><a href="#" class="submenu-item">Event Management</a></li>
+            <li><a href="#" class="submenu-item">Helpdesk Management</a></li>
+            <li><a href="#" class="submenu-item">Finance Monitoring</a></li>
+            <li><a href="#" class="submenu-item">Cryptocurrency</a></li>
+            <li><a href="#" class="submenu-item">Executive / SaaS</a></li>
+            <li><a href="#" class="submenu-item active">Campaign Monitoring</a></li>
+            <li><a href="#" class="submenu-item">Product Management</a></li>
+        </ul>
+        
+        <a href="#" class="menu-item">Apps & Pages</a>
+        <a href="#" class="menu-item">UI Elements</a>
+        <a href="#" class="menu-item">Forms</a>
+        <a href="#" class="menu-item">Charts</a>
+    </div>
+
+    <div class="main-content">
+        <div class="top-header">
+            <div class="search-bar">
+                <input type="text" placeholder="Search for anything...">
+            </div>
+            <div class="header-icons">
+                <div class="icon-btn">💬</div>
+                <div class="icon-btn">🔔<span class="badge">4</span></div>
+                <div class="user-avatar" style="width:32px; height:32px; margin:0;"></div>
+            </div>
+        </div>
+
+        <div class="dashboard-container">
+            <div class="welcome-row">
+                <div class="welcome-text">
+                    <h1>Hi, welcome back!</h1>
+                    <p>Your campaign monitoring dashboard template.</p>
+                </div>
+                <div class="date-range">
+                    <strong>20</strong> <small>OCT 2018<br>Sunday</small> 
+                    <span style="margin: 0 15px;">→</span> 
+                    <strong>27</strong> <small>OCT 2018<br>Monday</small>
+                </div>
+            </div>
+
+            <div class="nav-tabs">
+                <div class="tab active">Overview</div>
+                <div class="tab">Earnings</div>
+                <div class="tab">Reviews</div>
+                <div class="tab">Notifications</div>
+            </div>
+
+            <div class="mini-widgets">
+                <div class="card">
+                    <div class="widget-title">Bounce Rate</div>
+                    <div class="widget-value-container">
+                        <div class="widget-value">32.53%</div>
+                        <span class="badge-change negative">-0.5%</span>
+                    </div>
+                    <div class="widget-chart-placeholder"></div>
+                </div>
+                <div class="card">
+                    <div class="widget-title">Page Views</div>
+                    <div class="widget-value-container">
+                        <div class="widget-value">7,682</div>
+                        <span class="badge-change positive">+0.1%</span>
+                    </div>
+                    <div class="widget-chart-placeholder"></div>
+                </div>
+                <div class="card">
+                    <div class="widget-title">New Sessions</div>
+                    <div class="widget-value-container">
+                        <div class="widget-value">68.8</div>
+                        <span class="badge-change negative">-2.1%</span>
+                    </div>
+                    <div class="widget-chart-placeholder"></div>
+                </div>
+                <div class="card">
+                    <div class="widget-title">Avg. Time on Site</div>
+                    <div class="widget-value-container">
+                        <div class="widget-value">2m:35s</div>
+                        <span class="badge-change positive">+0.8%</span>
+                    </div>
+                    <div class="widget-chart-placeholder"></div>
+                </div>
+            </div>
+
+            <div class="main-grid">
+                <div class="card">
+                    <h3>Users By Country</h3>
+                    <p style="color:var(--text-muted); font-size:12px; margin-bottom: 20px;">The top locations where users of your product are located for this month.</p>
+                    
+                    <div style="display: flex; gap: 20px;">
+                        <div style="flex: 1; background: #f8f9fa; display:flex; align-items:center; justify-content:center; color:#ccc;">
+                            [ Bản đồ thế giới ]
+                        </div>
+                        
+                        <div class="country-list" style="width: 250px;">
+                            <div class="country-item">
+                                <div class="country-name">United States</div>
+                                <div class="progress-bar-container"><div class="progress-bar" style="width: 85%;"></div></div>
+                                <div class="country-val">5,508</div>
+                            </div>
+                            <div class="country-item">
+                                <div class="country-name">United Kingdom</div>
+                                <div class="progress-bar-container"><div class="progress-bar" style="width: 75%;"></div></div>
+                                <div class="country-val">5,122</div>
+                            </div>
+                            <div class="country-item">
+                                <div class="country-name">Russia</div>
+                                <div class="progress-bar-container"><div class="progress-bar" style="width: 65%;"></div></div>
+                                <div class="country-val">4,750</div>
+                            </div>
+                            <div class="country-item">
+                                <div class="country-name">China</div>
+                                <div class="progress-bar-container"><div class="progress-bar" style="width: 55%;"></div></div>
+                                <div class="country-val">4,300</div>
+                            </div>
+                            <div class="country-item">
+                                <div class="country-name">Australia</div>
+                                <div class="progress-bar-container"><div class="progress-bar" style="width: 45%;"></div></div>
+                                <div class="country-val">4,018</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Mobile Sessions</h3>
+                    <p style="color:var(--text-muted); font-size:12px; margin-bottom: 15px;">The percentage of users who uses mobile devices compare to other devices.</p>
+                    
+                    <div class="donut-container">
+                        <div class="donut-chart">
+                            <div class="donut-inner">65%</div>
+                        </div>
+                        <div class="donut-legend">
+                            <div>● Mobile <br><strong>6,098</strong></div>
+                            <div>● Desktop <br><strong>3,902</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lower-grid">
+                <div class="card">
+                    <h3>Audience Metrics</h3>
+                    <div class="metrics-summary">
+                        <div class="metric-block">
+                            <h3>120,500</h3>
+                            <p>● Users</p>
+                        </div>
+                        <div class="metric-block">
+                            <h3>360,108</h3>
+                            <p>● Page Views</p>
+                        </div>
+                        <div class="metric-block">
+                            <h3>150,712</h3>
+                            <p>● Sessions</p>
+                        </div>
+                    </div>
+                    <div class="placeholder-big-chart"></div>
+                </div>
+
+                <div class="card">
+                    <h3>Traffic Sources</h3>
+                    <div class="metrics-summary">
+                        <div class="metric-block">
+                            <h3>86,376</h3>
+                            <p>● Organic</p>
+                        </div>
+                        <div class="metric-block">
+                            <h3>25,001</h3>
+                            <p>● Direct</p>
+                        </div>
+                        <div class="metric-block">
+                            <h3>12,909</h3>
+                            <p>● Referral</p>
+                        </div>
+                    </div>
+                    <div class="placeholder-big-chart" style="border-bottom-color: #007bff; background: linear-gradient(180deg, rgba(0,123,255,0.1) 0%, rgba(255,255,255,0) 100%);"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>
