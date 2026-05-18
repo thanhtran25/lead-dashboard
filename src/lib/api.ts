@@ -83,13 +83,28 @@ export async function fetchLeadStats(
 
   const url = `${statsBaseUrl()}${env.statsPathPrefix}/leads?${params.toString()}`
 
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${idToken}`,
-      Accept: 'application/json',
-    },
-    signal,
-  })
+  let res: Response
+  try {
+    res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+        Accept: 'application/json',
+      },
+      signal,
+    })
+  } catch (cause) {
+    if (cause instanceof DOMException && cause.name === 'AbortError') throw cause
+    // Network-level failure — most often: backend unreachable from this
+    // network, CORS preflight denied, or mixed-content blocked by the browser.
+    const isMixed =
+      url.startsWith('http://') &&
+      typeof window !== 'undefined' &&
+      window.location.protocol === 'https:'
+    const hint = isMixed
+      ? ' (page is HTTPS, backend is HTTP — browser chặn mixed content)'
+      : ' (backend không reach được hoặc CORS bị từ chối)'
+    throw new ApiError(`Không gọi được API stats${hint}.`, 0, cause)
+  }
 
   if (!res.ok) {
     const body = await res.text().catch(() => '')

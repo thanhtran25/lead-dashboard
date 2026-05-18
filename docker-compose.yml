@@ -21,9 +21,3 @@ services:
       # Override at run time to point to a different environment.
       BACKEND_URL: ${VITE_BASE_PATH:-http://172.90.10.13:9910}
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/healthz"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 5s

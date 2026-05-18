@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ProtectedRoute from '@/routes/ProtectedRoute'
 import LoadingScreen from '@/components/LoadingScreen'
@@ -16,10 +16,13 @@ const queryClient = new QueryClient({
   },
 })
 
+// HashRouter (URLs like /#/dashboard) — lets dist/ deploy as plain static
+// files on any HTTP server (python http.server, nginx, file://, …) without
+// the SPA-fallback rewrite rule that BrowserRouter requires.
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <HashRouter>
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -34,7 +37,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Suspense>
-      </BrowserRouter>
+      </HashRouter>
     </QueryClientProvider>
   )
 }
