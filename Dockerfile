@@ -23,18 +23,19 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# Build-time configuration. Firebase Web API keys are public and safe to bake
-# into the bundle, so passing them as build args is fine. The backend host is
-# NOT baked in: we leave VITE_BASE_PATH empty so the SPA always calls /api/*
-# relative to its own origin, which Nginx forwards at runtime.
+# Build-time configuration. We do NOT bake real values into the bundle —
+# runtime config (window.__APP_CONFIG__ written by the entrypoint script)
+# is the source of truth in production. The ARG declarations exist purely so
+# CI systems that DO forward build args have somewhere to land them.
 ARG VITE_FIREBASE_KEY=""
 ARG VITE_CLIENT_TYPE=CLIENT_TYPE_WEB
 ARG VITE_STATS_PATH_PREFIX=/api/v1/stats
+ARG VITE_BASE_PATH=""
 
-ENV VITE_BASE_PATH="" \
-    VITE_FIREBASE_KEY=${VITE_FIREBASE_KEY} \
+ENV VITE_FIREBASE_KEY=${VITE_FIREBASE_KEY} \
     VITE_CLIENT_TYPE=${VITE_CLIENT_TYPE} \
-    VITE_STATS_PATH_PREFIX=${VITE_STATS_PATH_PREFIX}
+    VITE_STATS_PATH_PREFIX=${VITE_STATS_PATH_PREFIX} \
+    VITE_BASE_PATH=${VITE_BASE_PATH}
 
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
@@ -68,6 +69,6 @@ RUN chmod +x /docker-entrypoint.d/40-write-config-js.sh
 
 EXPOSE 8000
 
-# Liveness probe — nginx returns 200 on /healthz (defined in nginx config).
-HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
-  CMD wget -qO- "http://127.0.0.1:${PORT}/healthz" || exit 1
+# No application-level HEALTHCHECK — most platforms (Koyeb, Render, Fly, …)
+# run their own TCP/HTTP probes on $PORT, and a Docker-level probe just adds
+# noise when the backend is unreachable from the runtime network anyway.

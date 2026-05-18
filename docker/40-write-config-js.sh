@@ -16,6 +16,9 @@ CONFIG_JS="/usr/share/nginx/html/config.js"
 firebase_key="${VITE_FIREBASE_KEY:-}"
 client_type="${VITE_CLIENT_TYPE:-CLIENT_TYPE_WEB}"
 stats_prefix="${VITE_STATS_PATH_PREFIX:-/api/v1/stats}"
+# When set, the SPA hits this URL directly (no nginx proxy). Leave empty to
+# use the nginx /api/* reverse proxy (controlled by BACKEND_URL).
+base_path="${VITE_BASE_PATH:-}"
 
 # Escape `</` so an embedded value can't break out of the <script> tag, and
 # escape backslashes / double-quotes so the JSON-ish output stays valid.
@@ -30,7 +33,8 @@ cat > "$CONFIG_JS" <<EOF
 window.__APP_CONFIG__ = Object.freeze({
   firebaseKey: "$(escape "$firebase_key")",
   clientType: "$(escape "$client_type")",
-  statsPathPrefix: "$(escape "$stats_prefix")"
+  statsPathPrefix: "$(escape "$stats_prefix")",
+  basePath: "$(escape "$base_path")"
 });
 EOF
 
@@ -41,4 +45,4 @@ if [ -n "$firebase_key" ]; then
 else
     masked="(empty)"
 fi
-echo "[config.js] firebaseKey=${masked} clientType=${client_type} statsPathPrefix=${stats_prefix}"
+echo "[config.js] firebaseKey=${masked} clientType=${client_type} statsPathPrefix=${stats_prefix} basePath=${base_path:-(proxy via nginx)}"

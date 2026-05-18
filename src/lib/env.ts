@@ -62,17 +62,37 @@ export const env: AppEnv = {
   isDev: Boolean(import.meta.env.DEV),
 }
 
+// Surface a mixed-content warning early — browsers silently drop HTTP
+// requests fired from an HTTPS page, so the user sees only opaque
+// `TypeError: Failed to fetch` errors otherwise.
+if (
+  typeof window !== 'undefined' &&
+  env.basePath.startsWith('http://') &&
+  window.location.protocol === 'https:'
+) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    `[LeadScope] basePath is HTTP (${env.basePath}) but this page is HTTPS. ` +
+      `Browsers will BLOCK these requests as mixed content. ` +
+      `Host the SPA over HTTP, or point basePath at an HTTPS backend.`,
+  )
+}
+
 /**
- * In dev we go through the Vite proxy (relative URL), so basePath is not
- * required client-side. In production the SPA also uses relative `/api/*`
- * URLs which nginx forwards to the upstream — so basePath is only relevant
- * when calling the API directly from the browser (rare).
+ * Where the SPA should send `/api/v1/stats/*` requests.
+ *
+ * - **Dev:** always relative — the Vite proxy in `vite.config.ts` forwards
+ *   `/api/*` to the backend.
+ * - **Prod, basePath set:** absolute URL — browser hits the backend
+ *   directly. Useful when the backend is reachable from the user's network
+ *   and the SPA is hosted on the same protocol (HTTP→HTTP). Will fail with
+ *   "mixed content" if the SPA is HTTPS and the backend is HTTP.
+ * - **Prod, basePath empty:** relative — nginx in the container forwards
+ *   `/api/*` to whatever `BACKEND_URL` is set to. The classic reverse proxy.
  */
 export function statsBaseUrl(): string {
   if (env.isDev) return ''
-  // Always prefer same-origin in production; the nginx reverse proxy will
-  // handle forwarding regardless of where the backend actually lives.
-  return ''
+  return env.basePath
 }
 
 export function assertEnvForLogin(): string | null {
