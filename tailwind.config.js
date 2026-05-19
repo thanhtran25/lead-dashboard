@@ -8,32 +8,32 @@ export default {
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       colors: {
-        // Dark mode palette inspired by Bracket Admin (purple sidebar)
-        bg: '#0a0815',
-        sidebar: '#1a0d33',
-        sidebar2: '#231245',
-        topbar: '#15111f',
+        // Cursor-inspired neutral dark grey palette with purple brand accents
+        bg: '#1e1e1e',
+        sidebar: '#181818',
+        sidebar2: '#202020',
+        topbar: '#1e1e1e',
         surface: {
-          1: '#15111f',
-          2: '#1c1730',
-          3: '#251f3c',
+          1: '#252526',
+          2: '#2d2d30',
+          3: '#3a3a3a',
         },
         line: {
-          DEFAULT: 'rgba(255,255,255,0.06)',
-          strong: 'rgba(255,255,255,0.10)',
+          DEFAULT: 'rgba(255,255,255,0.08)',
+          strong: 'rgba(255,255,255,0.16)',
         },
         fg: {
           DEFAULT: '#ffffff',
-          muted: '#a09aba',
-          dim: '#6f6889',
-          faint: '#4a4560',
+          muted: '#a1a1aa',
+          dim: '#71717a',
+          faint: '#52525b',
         },
-        // Brand purples
+        // Brand purples — kept vivid as the primary accent on neutral grey
         brand: {
           DEFAULT: '#7c5cff',
           hover: '#9a82ff',
-          dim: '#5c44d6',
-          soft: '#b39ddb',
+          dim: '#6347d4',
+          soft: '#c4b5fd',
         },
         signal: {
           green: '#34d399',

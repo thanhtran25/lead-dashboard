@@ -6,6 +6,7 @@ import LoadingScreen from '@/components/LoadingScreen'
 
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
+const FraudUnblockPage = lazy(() => import('@/pages/FraudUnblockPage'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,6 +32,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/fraud-unblock"
+              element={
+                <ProtectedRoute>
+                  <FraudUnblockPage />
                 </ProtectedRoute>
               }
             />

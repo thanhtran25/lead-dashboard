@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => {
       // first paint of /login is not held back by recharts/d3.
       rollupOptions: {
         output: {
-          manualChunks: (id) => {
+        manualChunks: (id) => {
             if (!id.includes('node_modules')) return undefined
             if (id.includes('recharts') || id.includes('victory-vendor'))
               return 'charts'
