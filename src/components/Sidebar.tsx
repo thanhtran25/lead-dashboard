@@ -1,3 +1,4 @@
+import { NavLink } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
 
@@ -29,7 +30,8 @@ export default function Sidebar() {
       </div>
 
       <Section label={t('sidebar.mainMenu')}>
-        <MenuItem icon={<DashboardIcon />} label={t('sidebar.dashboard')} active />
+        <MenuItem to="/dashboard" icon={<DashboardIcon />} label={t('sidebar.dashboard')} />
+        <MenuItem to="/fraud-unblock" icon={<ShieldIcon />} label="Fraud Unblock" />
       </Section>
     </aside>
   )
@@ -44,7 +46,7 @@ function Section({
 }) {
   return (
     <>
-      <p className="text-[11px] uppercase tracking-wider text-brand-soft/70 px-6 py-2">
+      <p className="text-[11px] font-medium uppercase tracking-wider text-fg-dim px-6 py-2">
         {label}
       </p>
       {children}
@@ -53,27 +55,29 @@ function Section({
 }
 
 function MenuItem({
+  to,
   icon,
   label,
-  active,
 }: {
+  to: string
   icon: React.ReactNode
   label: string
-  active?: boolean
 }) {
   return (
-    <a
-      href="#"
-      className={[
-        'flex items-center gap-3 px-6 py-3 text-sm transition-colors',
-        active
-          ? 'bg-white/10 text-white border-l-[3px] border-white pl-[21px]'
-          : 'text-brand-soft hover:bg-white/5 hover:text-white',
-      ].join(' ')}
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        [
+          'flex items-center gap-3 px-6 py-2.5 text-sm transition-colors',
+          isActive
+            ? 'bg-brand/15 text-white border-l-[3px] border-brand pl-[21px]'
+            : 'text-fg-muted hover:bg-white/5 hover:text-white',
+        ].join(' ')
+      }
     >
       <span className="h-4 w-4 shrink-0">{icon}</span>
       {label}
-    </a>
+    </NavLink>
   )
 }
 
@@ -84,6 +88,26 @@ function DashboardIcon() {
       <rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.4" />
       <rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.4" />
       <rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  )
+}
+
+function ShieldIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden className="h-4 w-4">
+      <path
+        d="M8 1.5 2.5 3.5v4c0 3.2 2.4 6 5.5 7 3.1-1 5.5-3.8 5.5-7v-4L8 1.5Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <path
+        d="m5.8 8.1 1.6 1.6L10.4 6.7"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }
